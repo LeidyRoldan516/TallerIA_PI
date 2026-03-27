@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Recomendador de Películas</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="prompt" class="form-label">Describe la película que quieres encontrar:</label>
+            <input type="text" name="prompt" class="form-control" value="{{ search_term }}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+
+    {% if best_movie %}
+    <div class="card mt-4">
+        <img src="{{ best_movie.image.url }}" class="card-img-top" alt="{{ best_movie.title }}">
+        <div class="card-body">
+            <h5 class="card-title">{{ best_movie.title }}</h5>
+            <p class="card-text">{{ best_movie.description }}</p>
+            <p class="card-text">Género: {{ best_movie.genre }}</p>
+            <p class="card-text">Año: {{ best_movie.year }}</p>
+            <p class="card-text">Similitud: {{ similarity|floatformat:4 }}</p>
+            {% if best_movie.url %}
+                <a href="{{ best_movie.url }}" class="btn btn-primary" target="_blank">Ver enlace</a>
+            {% endif %}
+        </div>
+    </div>
+    {% elif search_term %}
+    <div class="alert alert-warning mt-4" role="alert">
+        No se encontró ninguna película con embeddings disponibles para tu búsqueda.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

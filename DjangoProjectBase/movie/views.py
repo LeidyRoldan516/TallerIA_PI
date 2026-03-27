@@ -3,6 +3,11 @@ from django.http import HttpResponse
 
 from .models import Movie
 
+from openai import OpenAI
+import numpy as np
+import os
+from dotenv import load_dotenv
+
 import matplotlib.pyplot as plt
 import matplotlib
 import io
@@ -19,6 +24,46 @@ def home(request):
         movies = Movie.objects.all()
     return render(request, 'home.html', {'searchTerm':searchTerm, 'movies':movies})
 
+# Cargar la API Key
+load_dotenv('../openAI.env')
+client = OpenAI(api_key=os.environ.get('openai_apikey'))
+
+# Función para calcular similitud de coseno
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+def recommend_movie(request):
+    # La película recomendada y la máxima similitud observada
+    best_movie = None
+    max_similarity = -1
+    search_term = ''
+
+    if request.method == 'POST':
+        # Recibir el prompt del usuario (esto se debe recibir desde el formulario de la app)
+        search_term = request.POST.get('prompt', '').strip()
+        if search_term:
+            # Generar embedding del prompt
+            response = client.embeddings.create(
+                input=[search_term],
+                model="text-embedding-3-small"
+            )
+            prompt_emb = np.array(response.data[0].embedding, dtype=np.float32)
+
+            # Recorrer la base de datos y comparar
+            for movie in Movie.objects.all():
+                if movie.emb:
+                    movie_emb = np.frombuffer(movie.emb, dtype=np.float32)
+                    similarity = cosine_similarity(prompt_emb, movie_emb)
+
+                    if similarity > max_similarity:
+                        max_similarity = similarity
+                        best_movie = movie
+
+    return render(request, 'recommendations.html', {
+        'best_movie': best_movie,
+        'similarity': max_similarity,
+        'search_term': search_term,
+    })
 
 def about(request):
     #return HttpResponse('<h1>Welcome to About Page</h1>')
